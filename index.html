@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Gabriel - Control Final Invertido</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root { --primary: #4f46e5; --secondary: #0f172a; --success: #16a34a; --danger: #dc2626; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; font-size: 13px; }
+        
+        #lockscreen { position: fixed; inset: 0; background: var(--secondary); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 30px; border-radius: 15px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .login-card input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; text-align: center; font-size: 18px; box-sizing: border-box; }
+
+        .main-layout { display: flex; gap: 15px; max-width: 1900px; margin: auto; }
+        .panel-izq { flex: 5; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .panel-der { flex: 1.2; min-width: 280px; background: white; padding: 15px; border-radius: 12px; position: sticky; top: 10px; height: fit-content; border: 1px solid #e2e8f0; }
+        
+        .total-card { background: var(--secondary); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; background: #f1f5f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .group { display: flex; flex-direction: column; }
+        label { font-size: 10px; font-weight: 800; color: #475569; margin-bottom: 2px; }
+        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
+
+        .chequera-seccion { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .chequera-tit { background: #334155; padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: white; }
+        .chequera-cont { display: none; }
+        .chequera-cont.abierto { display: block; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; color: #64748b; border-bottom: 1px solid #eee; text-transform: uppercase; }
+        tr:hover { background-color: #fff9db !important; }
+        tr:focus-within { background-color: #e0f2fe !important; }
+        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        
+        .monto-celda { font-weight: 800; color: #1e293b; font-size: 13px; }
+        .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; margin-right: 2px; }
+        .btn-del { color: var(--danger); border-color: #fca5a5; font-weight: bold; }
+        .btn-del:hover { background: #fee2e2; }
+        
+        .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; }
+
+        .badge-pendiente { color: #b45309; }
+        .badge-pagado { color: #15803d; font-weight: bold; }
+        .badge-anulado { color: #dc2626; text-decoration: line-through; opacity: 0.7; }
+
+        .alerta-box { background: #fff1f2; border-left: 3px solid var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="lockscreen">
+    <div class="login-card">
+        <h2 style="margin:0 0 15px 0; color:#334155;">SISTEMA GABRIEL</h2>
+        <input type="password" id="passInput" placeholder="Clave" onkeydown="if(event.key==='Enter') entrar()">
+        <button onclick="entrar()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">ENTRAR</button>
+    </div>
+</div>
+
+<div class="main-layout">
+    <div class="panel-izq" id="pdf-area">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0">🏦 Mis Chequeras</h3>
+            <div>
+                <button onclick="descargarJSON()" class="btn-mini">💾 Backup</button>
+                <button onclick="document.getElementById('fileIn').click()" class="btn-mini">📂 Importar</button>
+                <input type="file" id="fileIn" style="display:none" onchange="importarJSON(this)">
+                <button onclick="generarPDF()" class="btn-mini">📄 PDF</button>
+            </div>
+        </div>
+
+        <div class="total-card">
+            <small style="font-size:10px;">DEUDA TOTAL PENDIENTE</small>
+            <div id="montoTotal" style="font-size:28px; font-weight:800; color:#4ade80;">$ 0,00</div>
+        </div>
+
+        <div class="form-grid">
+            <input type="hidden" id="editId">
+            <div class="group"><label>N° CHEQUE</label><input type="text" id="num" class="nav-in"></div>
+            <div class="group"><label>REMITO</label><input type="text" id="remito" class="nav-in"></div>
+            <div class="group"><label>BENEFICIARIO</label><input type="text" id="nombre" class="nav-in"></div>
+            <div class="group"><label>IMPORTE</label><input type="number" id="importe" class="nav-in"></div>
+            <div class="group"><label>F. ENTREGA</label><input type="text" id="entrega" class="nav-in" placeholder="DD/MM/AA"></div>
+            <div class="group"><label>F. COBRO</label><input type="text" id="cobro" class="nav-in" placeholder="DD/MM/AA"></div>
+            <div class="group">
+                <label>ESTADO</label>
+                <select id="estado" class="nav-in">
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Pagado">Pagado</option>
+                    <option value="Anulado">Anulado</option>
+                </select>
+            </div>
+            <div class="group">
+                <label>OBSERVACIONES</label>
+                <input type="text" id="obs" class="nav-in" placeholder="...">
+            </div>
+            <div class="group">
+                <label>CHEQUERA</label>
+                <select id="carpetaSel" class="nav-in"></select>
+            </div>
+            <button onclick="guardar()" style="grid-column: span 2; background:var(--primary); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; height:35px;">💾 GUARDAR (ENTER)</button>
+            <button onclick="nuevaCarpeta()" class="btn-mini" style="font-weight:bold;">+ NUEVA CHEQUERA</button>
+        </div>
+
+        <div id="listaTablas"></div>
+    </div>
+
+    <div class="panel-der">
+        <h4 style="margin:0 0 10px 0; color:var(--danger)">⏰ VENCIMIENTOS</h4>
+        <div id="alertasCont"></div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCLBvSUo8NemdYl_zgP0Fo-tg8aLiggqgQ",
+        authDomain: "viajes-con-iva.firebaseapp.com",
+        databaseURL: "https://viajes-con-iva-default-rtdb.firebaseio.com",
+        projectId: "viajes-con-iva",
+        storageBucket: "viajes-con-iva.firebasestorage.app",
+        messagingSenderId: "659354481888",
+        appId: "1:659354481888:web:faec78a76d6fcb674d4c85"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const ref = db.ref('cheques_v22');
+
+    let datos = [];
+    let carpetas = [];
+    let carpetasAbiertas = {};
+
+    ref.on('value', snap => {
+        const val = snap.val();
+        datos = val ? Object.values(val) : [];
+        actualizarCarpetas();
+        render();
+    });
+
+    function entrar() { if(document.getElementById('passInput').value === "1234") document.getElementById('lockscreen').style.display='none'; }
+
+    function actualizarCarpetas() {
+        carpetas = [];
+        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!carpetas.includes(s.titulo)) carpetas.push(s.titulo); });
+        if(carpetas.length === 0) carpetas = ["2751 AL 2800"];
+        document.getElementById('carpetaSel').innerHTML = carpetas.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function toggleCarpeta(nom) {
+        carpetasAbiertas[nom] = !carpetasAbiertas[nom];
+        render();
+    }
+
+    function guardar() {
+        const id = document.getElementById('editId').value || Date.now().toString();
+        const info = {
+            id: id, tipo: 'registro',
+            num: document.getElementById('num').value,
+            remito: document.getElementById('remito').value,
+            nombre: document.getElementById('nombre').value,
+            importe: parseFloat(document.getElementById('importe').value) || 0,
+            entrega: document.getElementById('entrega').value,
+            cobro: document.getElementById('cobro').value,
+            estado: document.getElementById('estado').value,
+            obs: document.getElementById('obs').value || "",
+            carpeta: document.getElementById('carpetaSel').value
+        };
+        db.ref('cheques_v22/'+id).set(info).then(() => { 
+            limpiar(); 
+            document.querySelectorAll('.nav-in')[0].focus(); 
+        });
+    }
+
+    function render() {
+        const cont = document.getElementById('listaTablas');
+        const alertBox = document.getElementById('alertasCont');
+        cont.innerHTML = ""; alertBox.innerHTML = "";
+        let total = 0;
+        const hoy = new Date().setHours(0,0,0,0);
+
+        carpetas.forEach(f => {
+            // ORDEN INVERTIDO: b - a (el número más grande va primero)
+            const checks = datos.filter(d => d.tipo === 'registro' && (d.carpeta === f || (!d.carpeta && f === carpetas[0])))
+                                .sort((a,b) => parseInt(b.num) - parseInt(a.num));
+            
+            const estaAbierta = carpetasAbiertas[f];
+
+            let h = `<div class="chequera-seccion">
+                <div class="chequera-tit" onclick="toggleCarpeta('${f}')">
+                    <span>${f} (${checks.length} cheques)</span>
+                    <div>
+                        <small style="margin-right:10px;">${estaAbierta ? '▲ CERRAR' : '▼ ABRIR'}</small>
+                        <button onclick="event.stopPropagation(); borrarChequera('${f}')" class="btn-mini btn-del" style="background:#fff;">BORRAR CHEQUERA</button>
+                    </div>
+                </div>
+                <div class="chequera-cont ${estaAbierta ? 'abierto' : ''}">
+                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>ENTREGA</th><th>COBRO</th><th>ESTADO</th><th>OBSERVACIONES</th><th>MOVER</th><th>ACCIONES</th></tr></thead><tbody>`;
+            
+            checks.forEach(i => {
+                if(i.estado === 'Pendiente') {
+                    total += i.importe;
+                    const p = i.cobro.split('/');
+                    if(p.length === 3) {
+                        const vDate = new Date(p[2].length==2?"20"+p[2]:p[2], p[1]-1, p[0]);
+                        if(vDate <= hoy) alertBox.innerHTML += `<div class="alerta-box"><b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}<button class="btn-mini" style="width:100%; margin-top:5px; background:var(--success); color:white; border:none;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button></div>`;
+                    }
+                }
+                
+                h += `<tr tabindex="0">
+                    <td><b>${i.num}</b></td>
+                    <td>${i.nombre}</td>
+                    <td class="monto-celda">$ ${i.importe.toLocaleString()}</td>
+                    <td>${i.entrega || '-'}</td>
+                    <td>${i.cobro}</td>
+                    <td>
+                        <select class="table-select badge-${i.estado.toLowerCase()}" onchange="cambiarEstado('${i.id}', this.value)">
+                            <option value="Pendiente" ${i.estado==='Pendiente'?'selected':''}>Pendiente</option>
+                            <option value="Pagado" ${i.estado==='Pagado'?'selected':''}>Pagado</option>
+                            <option value="Anulado" ${i.estado==='Anulado'?'selected':''}>Anulado</option>
+                        </select>
+                    </td>
+                    <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; font-size:11px; color:#666">${i.obs || ''}</td>
+                    <td>
+                        <select class="table-select" style="width:50px" onchange="moverCheque('${i.id}', this.value)">
+                            <option value="">...</option>
+                            ${carpetas.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <button onclick="editar('${i.id}')" class="btn-mini">✏️</button>
+                        <button onclick="borrarReg('${i.id}')" class="btn-mini btn-del">🗑️</button>
+                    </td>
+                </tr>`;
+            });
+            cont.innerHTML += h + `</tbody></table></div></div>`;
+        });
+        document.getElementById('montoTotal').innerText = `$ ${total.toLocaleString()}`;
+    }
+
+    function cambiarEstado(id, est) { db.ref('cheques_v22/'+id).update({estado: est}); }
+    function moverCheque(id, c) { if(c) db.ref('cheques_v22/'+id).update({carpeta: c}); }
+    
+    function borrarReg(id) { 
+        if(confirm("¿Estás seguro de que querés borrar este cheque?")) {
+            db.ref('cheques_v22/'+id).remove(); 
+        }
+    }
+    
+    function borrarChequera(nom) {
+        if(confirm(`⚠️ ALERTA: ¿Seguro que querés borrar la chequera "${nom}" y TODOS los cheques que tiene adentro?`)) {
+            datos.filter(d => d.carpeta === nom || (d.tipo === 'separador' && d.titulo === nom)).forEach(b => db.ref('cheques_v22/'+b.id).remove());
+        }
+    }
+
+    function nuevaCarpeta() {
+        const n = prompt("Nombre de la nueva Chequera:");
+        if(n) { const id = Date.now().toString(); db.ref('cheques_v22/'+id).set({id:id, tipo:'separador', titulo:n.toUpperCase()}); }
+    }
+
+    function editar(id) {
+        const c = datos.find(x => x.id == id);
+        document.getElementById('num').value = c.num;
+        document.getElementById('nombre').value = c.nombre;
+        document.getElementById('importe').value = c.importe;
+        document.getElementById('entrega').value = c.entrega || "";
+        document.getElementById('cobro').value = c.cobro;
+        document.getElementById('remito').value = c.remito || "";
+        document.getElementById('estado').value = c.estado;
+        document.getElementById('obs').value = c.obs || "";
+        document.getElementById('carpetaSel').value = c.carpeta || carpetas[0];
+        document.getElementById('editId').value = c.id;
+        document.querySelectorAll('.nav-in')[0].focus();
+    }
+
+    function limpiar() {
+        document.getElementById('editId').value = "";
+        document.querySelectorAll('.nav-in').forEach(i => i.value = "");
+        document.getElementById('estado').value = "Pendiente";
+    }
+
+    function descargarJSON() {
+        const b = new Blob([JSON.stringify(datos)], {type: "application/json"});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Backup_Gabriel.json`; a.click();
+    }
+
+    function importarJSON(input) {
+        const r = new FileReader();
+        r.onload = function() {
+            try {
+                const lista = JSON.parse(r.result);
+                lista.forEach(item => { db.ref('cheques_v22/' + (item.id || Date.now())).update(item); });
+                alert("Importación exitosa");
+            } catch(e) { alert("Error al importar"); }
+        };
+        r.readAsText(input.files[0]);
+    }
+
+    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques_Gabriel.pdf'); }
+
+    document.addEventListener('keydown', e => {
+        const ins = Array.from(document.querySelectorAll('.nav-in'));
+        const idx = ins.indexOf(e.target);
+        if(e.key === "Enter" && idx > -1) {
+            e.preventDefault();
+            if(idx === ins.length-1) guardar(); else ins[idx+1].focus();
+        }
+    });
+</script>
+</body>
+</html>
