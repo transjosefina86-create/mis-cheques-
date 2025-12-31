@@ -3,49 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Gabriel - Control Final Invertido</title>
+    <title>Sistema Gabriel - Reparado</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4f46e5; --secondary: #0f172a; --success: #16a34a; --danger: #dc2626; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; font-size: 13px; }
-        
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; font-size: 13px; }
         #lockscreen { position: fixed; inset: 0; background: var(--secondary); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: white; padding: 30px; border-radius: 15px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .login-card input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; text-align: center; font-size: 18px; box-sizing: border-box; }
-
+        .login-card { background: white; padding: 30px; border-radius: 15px; width: 300px; text-align: center; }
+        .login-card input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 18px; box-sizing: border-box; }
         .main-layout { display: flex; gap: 15px; max-width: 1900px; margin: auto; }
         .panel-izq { flex: 5; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .panel-der { flex: 1.2; min-width: 280px; background: white; padding: 15px; border-radius: 12px; position: sticky; top: 10px; height: fit-content; border: 1px solid #e2e8f0; }
-        
         .total-card { background: var(--secondary); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
-        
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; background: #f1f5f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
         .group { display: flex; flex-direction: column; }
-        label { font-size: 10px; font-weight: 800; color: #475569; margin-bottom: 2px; }
-        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
-
+        label { font-size: 10px; font-weight: 800; color: #475569; }
+        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
         .chequera-seccion { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
         .chequera-tit { background: #334155; padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: white; }
         .chequera-cont { display: none; }
         .chequera-cont.abierto { display: block; }
-
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; color: #64748b; border-bottom: 1px solid #eee; text-transform: uppercase; }
-        tr:hover { background-color: #fff9db !important; }
-        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
-        
-        .monto-celda { font-weight: 800; color: #1e293b; font-size: 13px; }
-        .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; margin-right: 2px; }
+        th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; border-bottom: 1px solid #eee; }
+        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+        .monto-celda { font-weight: 800; color: #1e293b; }
+        .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; }
         .btn-del { color: var(--danger); border-color: #fca5a5; font-weight: bold; }
-        
         .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; font-weight: bold; }
-
         .badge-pendiente { color: #b45309; }
         .badge-pagado { color: #15803d; font-weight: bold; }
-        .badge-anulado { color: #dc2626; text-decoration: line-through; opacity: 0.7; }
-
+        .badge-anulado { color: #dc2626; text-decoration: line-through; }
         .alerta-box { background: #fff1f2; border-left: 3px solid var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; }
     </style>
 </head>
@@ -53,7 +42,7 @@
 
 <div id="lockscreen">
     <div class="login-card">
-        <h2 style="margin:0 0 15px 0; color:#334155;">SISTEMA GABRIEL</h2>
+        <h2>SISTEMA GABRIEL</h2>
         <input type="password" id="passInput" placeholder="Clave" onkeydown="if(event.key==='Enter') entrar()">
         <button onclick="entrar()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">ENTRAR</button>
     </div>
@@ -122,16 +111,15 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const ref = db.ref('cheques_v22');
 
     let datos = [];
     let carpetas = [];
     let carpetasAbiertas = {};
 
-    ref.on('value', snap => {
+    // ESCUCHA DE DATOS
+    db.ref('cheques_v22').on('value', snap => {
         const val = snap.val();
-        // IMPORTANTE: Aseguramos que cada objeto tenga su ID de Firebase
-        datos = val ? Object.keys(val).map(key => ({...val[key], id: key})) : [];
+        datos = val ? Object.keys(val).map(k => ({...val[k], id: k})) : [];
         actualizarCarpetas();
         render();
     });
@@ -139,21 +127,20 @@
     function entrar() { if(document.getElementById('passInput').value === "1234") document.getElementById('lockscreen').style.display='none'; }
 
     function actualizarCarpetas() {
-        carpetas = [];
-        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!carpetas.includes(s.titulo)) carpetas.push(s.titulo); });
-        if(carpetas.length === 0) carpetas = ["GENERAL"];
+        let temp = [];
+        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!temp.includes(s.titulo)) temp.push(s.titulo); });
+        if(temp.length === 0) temp = ["GENERAL"];
+        carpetas = temp;
         document.getElementById('carpetaSel').innerHTML = carpetas.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
-    function toggleCarpeta(nom) {
-        carpetasAbiertas[nom] = !carpetasAbiertas[nom];
-        render();
-    }
+    function toggleCarpeta(nom) { carpetasAbiertas[nom] = !carpetasAbiertas[nom]; render(); }
 
     function guardar() {
-        const id = document.getElementById('editId').value || Date.now().toString();
+        const id = document.getElementById('editId').value || db.ref('cheques_v22').push().key;
         const info = {
-            id: id, tipo: 'registro',
+            id: id,
+            tipo: 'registro',
             num: document.getElementById('num').value,
             remito: document.getElementById('remito').value,
             nombre: document.getElementById('nombre').value,
@@ -164,18 +151,20 @@
             obs: document.getElementById('obs').value || "",
             carpeta: document.getElementById('carpetaSel').value
         };
-        db.ref('cheques_v22/'+id).update(info).then(() => { 
-            limpiar(); 
-            document.querySelectorAll('.nav-in')[0].focus(); 
-        });
+        db.ref('cheques_v22/' + id).set(info).then(() => { limpiar(); });
     }
 
     function cambiarEstado(id, est) { 
-        if(id) db.ref('cheques_v22/'+id).update({estado: est}); 
+        if(!id) return;
+        db.ref('cheques_v22/' + id).update({estado: est}); 
     }
 
     function moverCheque(id, c) { 
-        if(id && c) db.ref('cheques_v22/'+id).update({carpeta: c}); 
+        if(id && c) db.ref('cheques_v22/' + id).update({carpeta: c}); 
+    }
+
+    function borrarReg(id) { 
+        if(confirm("¿Borrar?")) db.ref('cheques_v22/' + id).remove(); 
     }
 
     function render() {
@@ -185,25 +174,19 @@
         let total = 0;
         const hoy = new Date().setHours(0,0,0,0);
 
-        // Si hay cheques sin carpeta, los metemos en la primera carpeta o en "GENERAL"
-        const carpetaPorDefecto = carpetas[0] || "GENERAL";
-
         carpetas.forEach(f => {
-            const checks = datos.filter(d => d.tipo === 'registro' && (d.carpeta === f || (!d.carpeta && f === carpetaPorDefecto)))
+            const checks = datos.filter(d => d.tipo === 'registro' && (d.carpeta === f || (!d.carpeta && f === carpetas[0])))
                                 .sort((a,b) => parseInt(b.num) - parseInt(a.num));
             
-            const estaAbierta = carpetasAbiertas[f];
+            const abierta = carpetasAbiertas[f];
 
             let h = `<div class="chequera-seccion">
                 <div class="chequera-tit" onclick="toggleCarpeta('${f}')">
                     <span>${f} (${checks.length} cheques)</span>
-                    <div>
-                        <small style="margin-right:10px;">${estaAbierta ? '▲ CERRAR' : '▼ ABRIR'}</small>
-                        <button onclick="event.stopPropagation(); borrarChequera('${f}')" class="btn-mini btn-del" style="background:#fff;">BORRAR CHEQUERA</button>
-                    </div>
+                    <small>${abierta ? '▲' : '▼'}</small>
                 </div>
-                <div class="chequera-cont ${estaAbierta ? 'abierto' : ''}">
-                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>MOVER</th><th>ACCIONES</th></tr></thead><tbody>`;
+                <div class="chequera-cont ${abierta ? 'abierto' : ''}">
+                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>`;
             
             checks.forEach(i => {
                 if(i.estado === 'Pendiente') {
@@ -212,7 +195,10 @@
                     if(p.length === 3) {
                         const vDate = new Date(p[2].length==2?"20"+p[2]:p[2], p[1]-1, p[0]).setHours(0,0,0,0);
                         if(vDate <= hoy) {
-                            alertBox.innerHTML += `<div class="alerta-box"><b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}<button class="btn-mini" style="width:100%; margin-top:5px; background:var(--success); color:white; border:none;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button></div>`;
+                            alertBox.innerHTML += `<div class="alerta-box">
+                                <b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}
+                                <button class="btn-mini" style="width:100%; background:var(--success); color:white; border:none; margin-top:5px;" onclick="cambiarEstado('${i.id}', 'Pagado')">PAGADO</button>
+                            </div>`;
                         }
                     }
                 }
@@ -230,12 +216,6 @@
                         </select>
                     </td>
                     <td>
-                        <select class="table-select" style="width:50px" onchange="moverCheque('${i.id}', this.value)">
-                            <option value="">...</option>
-                            ${carpetas.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td>
                         <button onclick="editar('${i.id}')" class="btn-mini">✏️</button>
                         <button onclick="borrarReg('${i.id}')" class="btn-mini btn-del">🗑️</button>
                     </td>
@@ -246,25 +226,13 @@
         document.getElementById('montoTotal').innerText = `$ ${total.toLocaleString()}`;
     }
 
-    function borrarReg(id) { 
-        if(confirm("¿Estás seguro de que querés borrar este cheque?")) {
-            db.ref('cheques_v22/'+id).remove(); 
-        }
-    }
-    
-    function borrarChequera(nom) {
-        if(confirm(`⚠️ ALERTA: ¿Seguro que querés borrar la chequera "${nom}" y TODOS los cheques que tiene adentro?`)) {
-            datos.filter(d => d.carpeta === nom || (d.tipo === 'separador' && d.titulo === nom)).forEach(b => db.ref('cheques_v22/'+b.id).remove());
-        }
-    }
-
     function nuevaCarpeta() {
-        const n = prompt("Nombre de la nueva Chequera:");
-        if(n) { const id = Date.now().toString(); db.ref('cheques_v22/'+id).set({id:id, tipo:'separador', titulo:n.toUpperCase()}); }
+        const n = prompt("Nombre:");
+        if(n) { const id = db.ref('cheques_v22').push().key; db.ref('cheques_v22/'+id).set({id:id, tipo:'separador', titulo:n.toUpperCase()}); }
     }
 
     function editar(id) {
-        const c = datos.find(x => x.id == id);
+        const c = datos.find(x => x.id === id);
         if(!c) return;
         document.getElementById('num').value = c.num;
         document.getElementById('nombre').value = c.nombre;
@@ -276,18 +244,16 @@
         document.getElementById('obs').value = c.obs || "";
         document.getElementById('carpetaSel').value = c.carpeta || carpetas[0];
         document.getElementById('editId').value = c.id;
-        document.querySelectorAll('.nav-in')[0].focus();
     }
 
     function limpiar() {
         document.getElementById('editId').value = "";
         document.querySelectorAll('.nav-in').forEach(i => i.value = "");
-        document.getElementById('estado').value = "Pendiente";
     }
 
     function descargarJSON() {
         const b = new Blob([JSON.stringify(datos)], {type: "application/json"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Backup_Gabriel.json`; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Backup.json`; a.click();
     }
 
     function importarJSON(input) {
@@ -296,22 +262,21 @@
             try {
                 const lista = JSON.parse(r.result);
                 lista.forEach(item => { 
-                    const id = item.id || Date.now() + Math.random();
-                    db.ref('cheques_v22/' + id).update(item); 
+                    const id = item.id || db.ref('cheques_v22').push().key;
+                    db.ref('cheques_v22/' + id).set(item); 
                 });
-                alert("Importación exitosa");
-            } catch(e) { alert("Error al importar"); }
+                alert("OK");
+            } catch(e) { alert("Error"); }
         };
         r.readAsText(input.files[0]);
     }
 
-    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques_Gabriel.pdf'); }
+    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques.pdf'); }
 
     document.addEventListener('keydown', e => {
-        const ins = Array.from(document.querySelectorAll('.nav-in'));
-        const idx = ins.indexOf(e.target);
-        if(e.key === "Enter" && idx > -1) {
-            e.preventDefault();
+        if(e.key === "Enter" && e.target.classList.contains('nav-in')) {
+            const ins = Array.from(document.querySelectorAll('.nav-in'));
+            const idx = ins.indexOf(e.target);
             if(idx === ins.length-1) guardar(); else ins[idx+1].focus();
         }
     });
