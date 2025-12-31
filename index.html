@@ -34,13 +34,11 @@
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; color: #64748b; border-bottom: 1px solid #eee; text-transform: uppercase; }
         tr:hover { background-color: #fff9db !important; }
-        tr:focus-within { background-color: #e0f2fe !important; }
         td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
         
         .monto-celda { font-weight: 800; color: #1e293b; font-size: 13px; }
         .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; margin-right: 2px; }
         .btn-del { color: var(--danger); border-color: #fca5a5; font-weight: bold; }
-        .btn-del:hover { background: #fee2e2; }
         
         .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; font-weight: bold; }
 
@@ -130,15 +128,10 @@
     let carpetas = [];
     let carpetasAbiertas = {};
 
-    // LECTURA DE DATOS CORREGIDA PARA MAPEAR IDS
     ref.on('value', snap => {
         const val = snap.val();
-        if(val){
-            datos = Object.keys(val).map(key => {
-                let obj = val[key];
-                obj.id = key; // Forzamos que el ID de Firebase esté en el objeto
-                return obj;
-            });
+        if(val) {
+            datos = Object.keys(val).map(key => ({...val[key], id: key}));
         } else {
             datos = [];
         }
@@ -149,16 +142,18 @@
     function entrar() { if(document.getElementById('passInput').value === "1234") document.getElementById('lockscreen').style.display='none'; }
 
     function actualizarCarpetas() {
-        carpetas = [];
-        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!carpetas.includes(s.titulo)) carpetas.push(s.titulo); });
-        if(carpetas.length === 0) carpetas = ["2751 AL 2800"];
+        let tempCarpetas = [];
+        datos.filter(d => d.tipo === 'separador').forEach(s => { 
+            if(!tempCarpetas.includes(s.titulo)) tempCarpetas.push(s.titulo); 
+        });
+        if(tempCarpetas.length === 0) tempCarpetas = ["PRINCIPAL"];
+        carpetas = tempCarpetas;
         document.getElementById('carpetaSel').innerHTML = carpetas.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
     function toggleCarpeta(nom) { carpetasAbiertas[nom] = !carpetasAbiertas[nom]; render(); }
 
     function guardar() {
-        // Si hay editId lo usamos, si no creamos uno nuevo en Firebase
         const editId = document.getElementById('editId').value;
         const id = editId || db.ref('cheques_v22').push().key;
         
@@ -176,29 +171,15 @@
             carpeta: document.getElementById('carpetaSel').value
         };
 
-        db.ref('cheques_v22/' + id).set(info).then(() => { 
-            limpiar(); 
-            document.querySelectorAll('.nav-in')[0].focus(); 
-        }).catch(err => alert("Error al guardar: " + err));
+        db.ref('cheques_v22/' + id).set(info).then(() => {
+            limpiar();
+            document.querySelectorAll('.nav-in')[0].focus();
+        });
     }
 
-    function cambiarEstado(id, est) { 
-        if(!id || id === "undefined") return;
-        db.ref('cheques_v22/' + id).update({estado: est}); 
-    }
-
-    function moverCheque(id, c) { 
-        if(id && c) db.ref('cheques_v22/' + id).update({carpeta: c}); 
-    }
-
-    function borrarReg(id) { 
-        if(confirm("¿Borrar cheque?")) db.ref('cheques_v22/' + id).remove(); 
-    }
-
-    function borrarChequera(nom) {
-        if(confirm(`¿Borrar la chequera "${nom}" y todos sus cheques?`)) {
-            datos.filter(d => d.carpeta === nom || (d.tipo === 'separador' && d.titulo === nom))
-                 .forEach(b => db.ref('cheques_v22/' + b.id).remove());
+    function cambiarEstado(id, nuevoEstado) {
+        if(id && id !== "undefined") {
+            db.ref('cheques_v22/' + id).update({estado: nuevoEstado});
         }
     }
 
@@ -206,7 +187,7 @@
         const cont = document.getElementById('listaTablas');
         const alertBox = document.getElementById('alertasCont');
         cont.innerHTML = ""; alertBox.innerHTML = "";
-        let total = 0;
+        let totalPendiente = 0;
         const hoy = new Date().setHours(0,0,0,0);
 
         carpetas.forEach(f => {
@@ -218,24 +199,21 @@
             let h = `<div class="chequera-seccion">
                 <div class="chequera-tit" onclick="toggleCarpeta('${f}')">
                     <span>${f} (${checks.length} cheques)</span>
-                    <div>
-                        <small>${abierta ? '▲' : '▼'}</small>
-                        <button onclick="event.stopPropagation(); borrarChequera('${f}')" class="btn-mini btn-del" style="margin-left:10px">X</button>
-                    </div>
+                    <small>${abierta ? '▲' : '▼'}</small>
                 </div>
                 <div class="chequera-cont ${abierta ? 'abierto' : ''}">
-                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>MOVER</th><th>ACCIONES</th></tr></thead><tbody>`;
+                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>`;
             
             checks.forEach(i => {
                 if(i.estado === 'Pendiente') {
-                    total += i.importe;
+                    totalPendiente += i.importe;
                     const p = i.cobro.split('/');
                     if(p.length === 3) {
                         const vDate = new Date(p[2].length==2?"20"+p[2]:p[2], p[1]-1, p[0]).setHours(0,0,0,0);
                         if(vDate <= hoy) {
                             alertBox.innerHTML += `<div class="alerta-box">
                                 <b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}
-                                <button class="btn-mini" style="width:100%; background:var(--success); color:white; border:none; margin-top:5px;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button>
+                                <button class="btn-mini" style="width:100%; background:var(--success); color:white; border:none; margin-top:5px;" onclick="cambiarEstado('${i.id}', 'Pagado')">PAGADO</button>
                             </div>`;
                         }
                     }
@@ -254,12 +232,6 @@
                         </select>
                     </td>
                     <td>
-                        <select class="table-select" onchange="moverCheque('${i.id}', this.value)">
-                            <option value="">...</option>
-                            ${carpetas.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td>
                         <button onclick="editar('${i.id}')" class="btn-mini">✏️</button>
                         <button onclick="borrarReg('${i.id}')" class="btn-mini btn-del">🗑️</button>
                     </td>
@@ -267,8 +239,10 @@
             });
             cont.innerHTML += h + `</tbody></table></div></div>`;
         });
-        document.getElementById('montoTotal').innerText = `$ ${total.toLocaleString()}`;
+        document.getElementById('montoTotal').innerText = `$ ${totalPendiente.toLocaleString()}`;
     }
+
+    function borrarReg(id) { if(confirm("¿Borrar?")) db.ref('cheques_v22/' + id).remove(); }
 
     function nuevaCarpeta() {
         const n = prompt("Nombre:");
@@ -288,7 +262,6 @@
         document.getElementById('obs').value = c.obs || "";
         document.getElementById('carpetaSel').value = c.carpeta || carpetas[0];
         document.getElementById('editId').value = c.id;
-        document.querySelectorAll('.nav-in')[0].focus();
     }
 
     function limpiar() {
@@ -311,7 +284,7 @@
                     const id = item.id || db.ref('cheques_v22').push().key;
                     db.ref('cheques_v22/' + id).set(item); 
                 });
-                alert("OK");
+                alert("Importado con éxito");
             } catch(e) { alert("Error"); }
         };
         r.readAsText(input.files[0]);
