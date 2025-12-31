@@ -3,38 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Gabriel - Reparado</title>
+    <title>Sistema Gabriel - Control Final Invertido</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4f46e5; --secondary: #0f172a; --success: #16a34a; --danger: #dc2626; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 10px; font-size: 13px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; font-size: 13px; }
+        
         #lockscreen { position: fixed; inset: 0; background: var(--secondary); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: white; padding: 30px; border-radius: 15px; width: 300px; text-align: center; }
-        .login-card input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 18px; box-sizing: border-box; }
+        .login-card { background: white; padding: 30px; border-radius: 15px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .login-card input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; text-align: center; font-size: 18px; box-sizing: border-box; }
+
         .main-layout { display: flex; gap: 15px; max-width: 1900px; margin: auto; }
         .panel-izq { flex: 5; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .panel-der { flex: 1.2; min-width: 280px; background: white; padding: 15px; border-radius: 12px; position: sticky; top: 10px; height: fit-content; border: 1px solid #e2e8f0; }
+        
         .total-card { background: var(--secondary); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; background: #f1f5f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
         .group { display: flex; flex-direction: column; }
-        label { font-size: 10px; font-weight: 800; color: #475569; }
-        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+        label { font-size: 10px; font-weight: 800; color: #475569; margin-bottom: 2px; }
+        input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
+
         .chequera-seccion { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
         .chequera-tit { background: #334155; padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: white; }
         .chequera-cont { display: none; }
         .chequera-cont.abierto { display: block; }
+
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; border-bottom: 1px solid #eee; }
-        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
-        .monto-celda { font-weight: 800; color: #1e293b; }
-        .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; }
+        th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; color: #64748b; border-bottom: 1px solid #eee; text-transform: uppercase; }
+        tr:hover { background-color: #fff9db !important; }
+        tr:focus-within { background-color: #e0f2fe !important; }
+        td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        
+        .monto-celda { font-weight: 800; color: #1e293b; font-size: 13px; }
+        .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; margin-right: 2px; }
         .btn-del { color: var(--danger); border-color: #fca5a5; font-weight: bold; }
+        .btn-del:hover { background: #fee2e2; }
+        
         .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; font-weight: bold; }
+
         .badge-pendiente { color: #b45309; }
         .badge-pagado { color: #15803d; font-weight: bold; }
-        .badge-anulado { color: #dc2626; text-decoration: line-through; }
+        .badge-anulado { color: #dc2626; text-decoration: line-through; opacity: 0.7; }
+
         .alerta-box { background: #fff1f2; border-left: 3px solid var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; }
     </style>
 </head>
@@ -42,7 +55,7 @@
 
 <div id="lockscreen">
     <div class="login-card">
-        <h2>SISTEMA GABRIEL</h2>
+        <h2 style="margin:0 0 15px 0; color:#334155;">SISTEMA GABRIEL</h2>
         <input type="password" id="passInput" placeholder="Clave" onkeydown="if(event.key==='Enter') entrar()">
         <button onclick="entrar()" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">ENTRAR</button>
     </div>
@@ -111,15 +124,24 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const ref = db.ref('cheques_v22');
 
     let datos = [];
     let carpetas = [];
     let carpetasAbiertas = {};
 
-    // ESCUCHA DE DATOS
-    db.ref('cheques_v22').on('value', snap => {
+    // LECTURA DE DATOS CORREGIDA PARA MAPEAR IDS
+    ref.on('value', snap => {
         const val = snap.val();
-        datos = val ? Object.keys(val).map(k => ({...val[k], id: k})) : [];
+        if(val){
+            datos = Object.keys(val).map(key => {
+                let obj = val[key];
+                obj.id = key; // Forzamos que el ID de Firebase esté en el objeto
+                return obj;
+            });
+        } else {
+            datos = [];
+        }
         actualizarCarpetas();
         render();
     });
@@ -127,17 +149,19 @@
     function entrar() { if(document.getElementById('passInput').value === "1234") document.getElementById('lockscreen').style.display='none'; }
 
     function actualizarCarpetas() {
-        let temp = [];
-        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!temp.includes(s.titulo)) temp.push(s.titulo); });
-        if(temp.length === 0) temp = ["GENERAL"];
-        carpetas = temp;
+        carpetas = [];
+        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!carpetas.includes(s.titulo)) carpetas.push(s.titulo); });
+        if(carpetas.length === 0) carpetas = ["2751 AL 2800"];
         document.getElementById('carpetaSel').innerHTML = carpetas.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
     function toggleCarpeta(nom) { carpetasAbiertas[nom] = !carpetasAbiertas[nom]; render(); }
 
     function guardar() {
-        const id = document.getElementById('editId').value || db.ref('cheques_v22').push().key;
+        // Si hay editId lo usamos, si no creamos uno nuevo en Firebase
+        const editId = document.getElementById('editId').value;
+        const id = editId || db.ref('cheques_v22').push().key;
+        
         const info = {
             id: id,
             tipo: 'registro',
@@ -151,11 +175,15 @@
             obs: document.getElementById('obs').value || "",
             carpeta: document.getElementById('carpetaSel').value
         };
-        db.ref('cheques_v22/' + id).set(info).then(() => { limpiar(); });
+
+        db.ref('cheques_v22/' + id).set(info).then(() => { 
+            limpiar(); 
+            document.querySelectorAll('.nav-in')[0].focus(); 
+        }).catch(err => alert("Error al guardar: " + err));
     }
 
     function cambiarEstado(id, est) { 
-        if(!id) return;
+        if(!id || id === "undefined") return;
         db.ref('cheques_v22/' + id).update({estado: est}); 
     }
 
@@ -164,7 +192,14 @@
     }
 
     function borrarReg(id) { 
-        if(confirm("¿Borrar?")) db.ref('cheques_v22/' + id).remove(); 
+        if(confirm("¿Borrar cheque?")) db.ref('cheques_v22/' + id).remove(); 
+    }
+
+    function borrarChequera(nom) {
+        if(confirm(`¿Borrar la chequera "${nom}" y todos sus cheques?`)) {
+            datos.filter(d => d.carpeta === nom || (d.tipo === 'separador' && d.titulo === nom))
+                 .forEach(b => db.ref('cheques_v22/' + b.id).remove());
+        }
     }
 
     function render() {
@@ -183,10 +218,13 @@
             let h = `<div class="chequera-seccion">
                 <div class="chequera-tit" onclick="toggleCarpeta('${f}')">
                     <span>${f} (${checks.length} cheques)</span>
-                    <small>${abierta ? '▲' : '▼'}</small>
+                    <div>
+                        <small>${abierta ? '▲' : '▼'}</small>
+                        <button onclick="event.stopPropagation(); borrarChequera('${f}')" class="btn-mini btn-del" style="margin-left:10px">X</button>
+                    </div>
                 </div>
                 <div class="chequera-cont ${abierta ? 'abierto' : ''}">
-                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>`;
+                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>MOVER</th><th>ACCIONES</th></tr></thead><tbody>`;
             
             checks.forEach(i => {
                 if(i.estado === 'Pendiente') {
@@ -197,7 +235,7 @@
                         if(vDate <= hoy) {
                             alertBox.innerHTML += `<div class="alerta-box">
                                 <b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}
-                                <button class="btn-mini" style="width:100%; background:var(--success); color:white; border:none; margin-top:5px;" onclick="cambiarEstado('${i.id}', 'Pagado')">PAGADO</button>
+                                <button class="btn-mini" style="width:100%; background:var(--success); color:white; border:none; margin-top:5px;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button>
                             </div>`;
                         }
                     }
@@ -213,6 +251,12 @@
                             <option value="Pendiente" ${i.estado==='Pendiente'?'selected':''}>Pendiente</option>
                             <option value="Pagado" ${i.estado==='Pagado'?'selected':''}>Pagado</option>
                             <option value="Anulado" ${i.estado==='Anulado'?'selected':''}>Anulado</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="table-select" onchange="moverCheque('${i.id}', this.value)">
+                            <option value="">...</option>
+                            ${carpetas.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </td>
                     <td>
@@ -232,7 +276,7 @@
     }
 
     function editar(id) {
-        const c = datos.find(x => x.id === id);
+        const c = datos.find(x => x.id == id);
         if(!c) return;
         document.getElementById('num').value = c.num;
         document.getElementById('nombre').value = c.nombre;
@@ -244,11 +288,13 @@
         document.getElementById('obs').value = c.obs || "";
         document.getElementById('carpetaSel').value = c.carpeta || carpetas[0];
         document.getElementById('editId').value = c.id;
+        document.querySelectorAll('.nav-in')[0].focus();
     }
 
     function limpiar() {
         document.getElementById('editId').value = "";
         document.querySelectorAll('.nav-in').forEach(i => i.value = "");
+        document.getElementById('estado').value = "Pendiente";
     }
 
     function descargarJSON() {
