@@ -3,40 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Gabriel - Control Final</title>
+    <title>Sistema Gabriel - Control Final Invertido</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4f46e5; --secondary: #0f172a; --success: #16a34a; --danger: #dc2626; --bg: #f8fafc; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; font-size: 13px; }
+        
         #lockscreen { position: fixed; inset: 0; background: var(--secondary); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .login-card { background: white; padding: 30px; border-radius: 15px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .login-card input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; text-align: center; font-size: 18px; box-sizing: border-box; }
+
         .main-layout { display: flex; gap: 15px; max-width: 1900px; margin: auto; }
         .panel-izq { flex: 5; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .panel-der { flex: 1.2; min-width: 280px; background: white; padding: 15px; border-radius: 12px; position: sticky; top: 10px; height: fit-content; border: 1px solid #e2e8f0; }
+        
         .total-card { background: var(--secondary); color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; background: #f1f5f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
         .group { display: flex; flex-direction: column; }
         label { font-size: 10px; font-weight: 800; color: #475569; margin-bottom: 2px; }
         input, select { padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; outline: none; }
+
         .chequera-seccion { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
         .chequera-tit { background: #334155; padding: 8px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: white; }
         .chequera-cont { display: none; }
         .chequera-cont.abierto { display: block; }
+
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; color: #64748b; border-bottom: 1px solid #eee; text-transform: uppercase; }
         tr:hover { background-color: #fff9db !important; }
         td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        
         .monto-celda { font-weight: 800; color: #1e293b; font-size: 13px; }
         .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; margin-right: 2px; }
         .btn-del { color: var(--danger); border-color: #fca5a5; font-weight: bold; }
+        
         .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; font-weight: bold; }
+
         .badge-pendiente { color: #b45309; }
         .badge-pagado { color: #15803d; font-weight: bold; }
         .badge-anulado { color: #dc2626; text-decoration: line-through; opacity: 0.7; }
-        .alerta-box { background: #fff1f2; border-left: 4px solid var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; }
+
+        .alerta-box { background: #fff1f2; border-left: 3px solid var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -112,24 +122,16 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const ref = db.ref('cheques_v22');
 
     let datos = [];
     let carpetas = [];
     let carpetasAbiertas = {};
 
-    // --- LECTURA DE DATOS CORREGIDA ---
-    db.ref('cheques_v22').on('value', snap => {
+    ref.on('value', snap => {
         const val = snap.val();
-        if(!val) {
-            datos = [];
-        } else {
-            // Convertimos el objeto en array asegurando que mantenga su ID
-            datos = Object.keys(val).map(k => {
-                let obj = val[k];
-                if(!obj.id) obj.id = k;
-                return obj;
-            });
-        }
+        // IMPORTANTE: Aseguramos que cada objeto tenga su ID de Firebase
+        datos = val ? Object.keys(val).map(key => ({...val[key], id: key})) : [];
         actualizarCarpetas();
         render();
     });
@@ -137,14 +139,16 @@
     function entrar() { if(document.getElementById('passInput').value === "1234") document.getElementById('lockscreen').style.display='none'; }
 
     function actualizarCarpetas() {
-        let list = [];
-        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!list.includes(s.titulo)) list.push(s.titulo); });
-        if(list.length === 0) list = ["GENERAL"];
-        carpetas = list;
+        carpetas = [];
+        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!carpetas.includes(s.titulo)) carpetas.push(s.titulo); });
+        if(carpetas.length === 0) carpetas = ["GENERAL"];
         document.getElementById('carpetaSel').innerHTML = carpetas.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
-    function toggleCarpeta(nom) { carpetasAbiertas[nom] = !carpetasAbiertas[nom]; render(); }
+    function toggleCarpeta(nom) {
+        carpetasAbiertas[nom] = !carpetasAbiertas[nom];
+        render();
+    }
 
     function guardar() {
         const id = document.getElementById('editId').value || Date.now().toString();
@@ -160,53 +164,55 @@
             obs: document.getElementById('obs').value || "",
             carpeta: document.getElementById('carpetaSel').value
         };
-        db.ref('cheques_v22/' + id).set(info).then(() => { limpiar(); });
+        db.ref('cheques_v22/'+id).update(info).then(() => { 
+            limpiar(); 
+            document.querySelectorAll('.nav-in')[0].focus(); 
+        });
     }
 
     function cambiarEstado(id, est) { 
-        if(id) db.ref('cheques_v22/' + id).update({estado: est}); 
+        if(id) db.ref('cheques_v22/'+id).update({estado: est}); 
     }
 
     function moverCheque(id, c) { 
-        if(id && c) db.ref('cheques_v22/' + id).update({carpeta: c}); 
-    }
-
-    function borrarReg(id) { 
-        if(confirm("¿Borrar?")) db.ref('cheques_v22/' + id).remove(); 
+        if(id && c) db.ref('cheques_v22/'+id).update({carpeta: c}); 
     }
 
     function render() {
         const cont = document.getElementById('listaTablas');
         const alertBox = document.getElementById('alertasCont');
         cont.innerHTML = ""; alertBox.innerHTML = "";
-        let totalP = 0;
+        let total = 0;
         const hoy = new Date().setHours(0,0,0,0);
 
+        // Si hay cheques sin carpeta, los metemos en la primera carpeta o en "GENERAL"
+        const carpetaPorDefecto = carpetas[0] || "GENERAL";
+
         carpetas.forEach(f => {
-            const checks = datos.filter(d => d.tipo === 'registro' && (d.carpeta === f || (!d.carpeta && f === "GENERAL")))
+            const checks = datos.filter(d => d.tipo === 'registro' && (d.carpeta === f || (!d.carpeta && f === carpetaPorDefecto)))
                                 .sort((a,b) => parseInt(b.num) - parseInt(a.num));
             
-            const abierta = carpetasAbiertas[f];
+            const estaAbierta = carpetasAbiertas[f];
 
             let h = `<div class="chequera-seccion">
                 <div class="chequera-tit" onclick="toggleCarpeta('${f}')">
                     <span>${f} (${checks.length} cheques)</span>
-                    <div><small>${abierta ? '▲' : '▼'}</small></div>
+                    <div>
+                        <small style="margin-right:10px;">${estaAbierta ? '▲ CERRAR' : '▼ ABRIR'}</small>
+                        <button onclick="event.stopPropagation(); borrarChequera('${f}')" class="btn-mini btn-del" style="background:#fff;">BORRAR CHEQUERA</button>
+                    </div>
                 </div>
-                <div class="chequera-cont ${abierta ? 'abierto' : ''}">
+                <div class="chequera-cont ${estaAbierta ? 'abierto' : ''}">
                 <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>MOVER</th><th>ACCIONES</th></tr></thead><tbody>`;
             
             checks.forEach(i => {
                 if(i.estado === 'Pendiente') {
-                    totalP += i.importe;
+                    total += i.importe;
                     const p = i.cobro.split('/');
                     if(p.length === 3) {
                         const vDate = new Date(p[2].length==2?"20"+p[2]:p[2], p[1]-1, p[0]).setHours(0,0,0,0);
                         if(vDate <= hoy) {
-                            alertBox.innerHTML += `<div class="alerta-box">
-                                <b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}
-                                <button class="btn-mini" style="width:100%; margin-top:5px; background:var(--success); color:white; border:none;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button>
-                            </div>`;
+                            alertBox.innerHTML += `<div class="alerta-box"><b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}<button class="btn-mini" style="width:100%; margin-top:5px; background:var(--success); color:white; border:none;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button></div>`;
                         }
                     }
                 }
@@ -224,7 +230,7 @@
                         </select>
                     </td>
                     <td>
-                        <select class="table-select" onchange="moverCheque('${i.id}', this.value)">
+                        <select class="table-select" style="width:50px" onchange="moverCheque('${i.id}', this.value)">
                             <option value="">...</option>
                             ${carpetas.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
@@ -237,11 +243,23 @@
             });
             cont.innerHTML += h + `</tbody></table></div></div>`;
         });
-        document.getElementById('montoTotal').innerText = `$ ${totalP.toLocaleString()}`;
+        document.getElementById('montoTotal').innerText = `$ ${total.toLocaleString()}`;
+    }
+
+    function borrarReg(id) { 
+        if(confirm("¿Estás seguro de que querés borrar este cheque?")) {
+            db.ref('cheques_v22/'+id).remove(); 
+        }
+    }
+    
+    function borrarChequera(nom) {
+        if(confirm(`⚠️ ALERTA: ¿Seguro que querés borrar la chequera "${nom}" y TODOS los cheques que tiene adentro?`)) {
+            datos.filter(d => d.carpeta === nom || (d.tipo === 'separador' && d.titulo === nom)).forEach(b => db.ref('cheques_v22/'+b.id).remove());
+        }
     }
 
     function nuevaCarpeta() {
-        const n = prompt("Nombre:");
+        const n = prompt("Nombre de la nueva Chequera:");
         if(n) { const id = Date.now().toString(); db.ref('cheques_v22/'+id).set({id:id, tipo:'separador', titulo:n.toUpperCase()}); }
     }
 
@@ -256,7 +274,7 @@
         document.getElementById('remito').value = c.remito || "";
         document.getElementById('estado').value = c.estado;
         document.getElementById('obs').value = c.obs || "";
-        document.getElementById('carpetaSel').value = c.carpeta || "GENERAL";
+        document.getElementById('carpetaSel').value = c.carpeta || carpetas[0];
         document.getElementById('editId').value = c.id;
         document.querySelectorAll('.nav-in')[0].focus();
     }
@@ -277,14 +295,17 @@
         r.onload = function() {
             try {
                 const lista = JSON.parse(r.result);
-                lista.forEach(item => { db.ref('cheques_v22/' + (item.id || Date.now())).set(item); });
-                alert("OK");
-            } catch(e) { alert("Error"); }
+                lista.forEach(item => { 
+                    const id = item.id || Date.now() + Math.random();
+                    db.ref('cheques_v22/' + id).update(item); 
+                });
+                alert("Importación exitosa");
+            } catch(e) { alert("Error al importar"); }
         };
         r.readAsText(input.files[0]);
     }
 
-    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques.pdf'); }
+    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques_Gabriel.pdf'); }
 
     document.addEventListener('keydown', e => {
         const ins = Array.from(document.querySelectorAll('.nav-in'));
