@@ -34,13 +34,15 @@
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 8px; font-size: 9px; background: #f8fafc; color: #64748b; border-bottom: 1px solid #eee; text-transform: uppercase; }
         tr:hover { background-color: #fff9db !important; }
+        tr:focus-within { background-color: #e0f2fe !important; }
         td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
         
         .monto-celda { font-weight: 800; color: #1e293b; font-size: 13px; }
         .btn-mini { padding: 3px 7px; font-size: 10px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd; background: #fff; margin-right: 2px; }
         .btn-del { color: var(--danger); border-color: #fca5a5; font-weight: bold; }
+        .btn-del:hover { background: #fee2e2; }
         
-        .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; font-weight: bold; }
+        .table-select { font-size: 10px; padding: 2px; border-radius: 3px; border: 1px solid #ccc; }
 
         .badge-pendiente { color: #b45309; }
         .badge-pagado { color: #15803d; font-weight: bold; }
@@ -92,7 +94,10 @@
                     <option value="Anulado">Anulado</option>
                 </select>
             </div>
-            <div class="group"><label>OBSERVACIONES</label><input type="text" id="obs" class="nav-in"></div>
+            <div class="group">
+                <label>OBSERVACIONES</label>
+                <input type="text" id="obs" class="nav-in" placeholder="...">
+            </div>
             <div class="group">
                 <label>CHEQUERA</label>
                 <select id="carpetaSel" class="nav-in"></select>
@@ -130,11 +135,7 @@
 
     ref.on('value', snap => {
         const val = snap.val();
-        if(val) {
-            datos = Object.keys(val).map(key => ({...val[key], id: key}));
-        } else {
-            datos = [];
-        }
+        datos = val ? Object.values(val) : [];
         actualizarCarpetas();
         render();
     });
@@ -142,24 +143,21 @@
     function entrar() { if(document.getElementById('passInput').value === "1234") document.getElementById('lockscreen').style.display='none'; }
 
     function actualizarCarpetas() {
-        let tempCarpetas = [];
-        datos.filter(d => d.tipo === 'separador').forEach(s => { 
-            if(!tempCarpetas.includes(s.titulo)) tempCarpetas.push(s.titulo); 
-        });
-        if(tempCarpetas.length === 0) tempCarpetas = ["PRINCIPAL"];
-        carpetas = tempCarpetas;
+        carpetas = [];
+        datos.filter(d => d.tipo === 'separador').forEach(s => { if(!carpetas.includes(s.titulo)) carpetas.push(s.titulo); });
+        if(carpetas.length === 0) carpetas = ["2751 AL 2800"];
         document.getElementById('carpetaSel').innerHTML = carpetas.map(c => `<option value="${c}">${c}</option>`).join('');
     }
 
-    function toggleCarpeta(nom) { carpetasAbiertas[nom] = !carpetasAbiertas[nom]; render(); }
+    function toggleCarpeta(nom) {
+        carpetasAbiertas[nom] = !carpetasAbiertas[nom];
+        render();
+    }
 
     function guardar() {
-        const editId = document.getElementById('editId').value;
-        const id = editId || db.ref('cheques_v22').push().key;
-        
+        const id = document.getElementById('editId').value || Date.now().toString();
         const info = {
-            id: id,
-            tipo: 'registro',
+            id: id, tipo: 'registro',
             num: document.getElementById('num').value,
             remito: document.getElementById('remito').value,
             nombre: document.getElementById('nombre').value,
@@ -170,65 +168,64 @@
             obs: document.getElementById('obs').value || "",
             carpeta: document.getElementById('carpetaSel').value
         };
-
-        db.ref('cheques_v22/' + id).set(info).then(() => {
-            limpiar();
-            document.querySelectorAll('.nav-in')[0].focus();
+        db.ref('cheques_v22/'+id).set(info).then(() => { 
+            limpiar(); 
+            document.querySelectorAll('.nav-in')[0].focus(); 
         });
-    }
-
-    function cambiarEstado(id, nuevoEstado) {
-        if(id && id !== "undefined") {
-            db.ref('cheques_v22/' + id).update({estado: nuevoEstado});
-        }
     }
 
     function render() {
         const cont = document.getElementById('listaTablas');
         const alertBox = document.getElementById('alertasCont');
         cont.innerHTML = ""; alertBox.innerHTML = "";
-        let totalPendiente = 0;
+        let total = 0;
         const hoy = new Date().setHours(0,0,0,0);
 
         carpetas.forEach(f => {
             const checks = datos.filter(d => d.tipo === 'registro' && (d.carpeta === f || (!d.carpeta && f === carpetas[0])))
                                 .sort((a,b) => parseInt(b.num) - parseInt(a.num));
             
-            const abierta = carpetasAbiertas[f];
+            const estaAbierta = carpetasAbiertas[f];
 
             let h = `<div class="chequera-seccion">
                 <div class="chequera-tit" onclick="toggleCarpeta('${f}')">
                     <span>${f} (${checks.length} cheques)</span>
-                    <small>${abierta ? '▲' : '▼'}</small>
+                    <div>
+                        <small style="margin-right:10px;">${estaAbierta ? '▲ CERRAR' : '▼ ABRIR'}</small>
+                        <button onclick="event.stopPropagation(); borrarChequera('${f}')" class="btn-mini btn-del" style="background:#fff;">BORRAR CHEQUERA</button>
+                    </div>
                 </div>
-                <div class="chequera-cont ${abierta ? 'abierto' : ''}">
-                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>COBRO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>`;
+                <div class="chequera-cont ${estaAbierta ? 'abierto' : ''}">
+                <table><thead><tr><th>N°</th><th>BENEFICIARIO</th><th>IMPORTE</th><th>ENTREGA</th><th>COBRO</th><th>ESTADO</th><th>OBSERVACIONES</th><th>MOVER</th><th>ACCIONES</th></tr></thead><tbody>`;
             
             checks.forEach(i => {
                 if(i.estado === 'Pendiente') {
-                    totalPendiente += i.importe;
+                    total += i.importe;
                     const p = i.cobro.split('/');
                     if(p.length === 3) {
-                        const vDate = new Date(p[2].length==2?"20"+p[2]:p[2], p[1]-1, p[0]).setHours(0,0,0,0);
-                        if(vDate <= hoy) {
-                            alertBox.innerHTML += `<div class="alerta-box">
-                                <b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}
-                                <button class="btn-mini" style="width:100%; background:var(--success); color:white; border:none; margin-top:5px;" onclick="cambiarEstado('${i.id}', 'Pagado')">PAGADO</button>
-                            </div>`;
-                        }
+                        const vDate = new Date(p[2].length==2?"20"+p[2]:p[2], p[1]-1, p[0]);
+                        if(vDate <= hoy) alertBox.innerHTML += `<div class="alerta-box"><b>${i.cobro}</b> - ${i.nombre}<br>$ ${i.importe.toLocaleString()}<button class="btn-mini" style="width:100%; margin-top:5px; background:var(--success); color:white; border:none;" onclick="cambiarEstado('${i.id}', 'Pagado')">MARCAR PAGADO</button></div>`;
                     }
                 }
                 
-                h += `<tr>
+                h += `<tr tabindex="0">
                     <td><b>${i.num}</b></td>
                     <td>${i.nombre}</td>
                     <td class="monto-celda">$ ${i.importe.toLocaleString()}</td>
+                    <td>${i.entrega || '-'}</td>
                     <td>${i.cobro}</td>
                     <td>
                         <select class="table-select badge-${i.estado.toLowerCase()}" onchange="cambiarEstado('${i.id}', this.value)">
                             <option value="Pendiente" ${i.estado==='Pendiente'?'selected':''}>Pendiente</option>
                             <option value="Pagado" ${i.estado==='Pagado'?'selected':''}>Pagado</option>
                             <option value="Anulado" ${i.estado==='Anulado'?'selected':''}>Anulado</option>
+                        </select>
+                    </td>
+                    <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; font-size:11px; color:#666">${i.obs || ''}</td>
+                    <td>
+                        <select class="table-select" style="width:50px" onchange="moverCheque('${i.id}', this.value)">
+                            <option value="">...</option>
+                            ${carpetas.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </td>
                     <td>
@@ -239,19 +236,31 @@
             });
             cont.innerHTML += h + `</tbody></table></div></div>`;
         });
-        document.getElementById('montoTotal').innerText = `$ ${totalPendiente.toLocaleString()}`;
+        document.getElementById('montoTotal').innerText = `$ ${total.toLocaleString()}`;
     }
 
-    function borrarReg(id) { if(confirm("¿Borrar?")) db.ref('cheques_v22/' + id).remove(); }
+    function cambiarEstado(id, est) { db.ref('cheques_v22/'+id).update({estado: est}); }
+    function moverCheque(id, c) { if(c) db.ref('cheques_v22/'+id).update({carpeta: c}); }
+    
+    function borrarReg(id) { 
+        if(confirm("¿Estás seguro de que querés borrar este cheque?")) {
+            db.ref('cheques_v22/'+id).remove(); 
+        }
+    }
+    
+    function borrarChequera(nom) {
+        if(confirm(`⚠️ ALERTA: ¿Seguro que querés borrar la chequera "${nom}" y TODOS los cheques que tiene adentro?`)) {
+            datos.filter(d => d.carpeta === nom || (d.tipo === 'separador' && d.titulo === nom)).forEach(b => db.ref('cheques_v22/'+b.id).remove());
+        }
+    }
 
     function nuevaCarpeta() {
-        const n = prompt("Nombre:");
-        if(n) { const id = db.ref('cheques_v22').push().key; db.ref('cheques_v22/'+id).set({id:id, tipo:'separador', titulo:n.toUpperCase()}); }
+        const n = prompt("Nombre de la nueva Chequera:");
+        if(n) { const id = Date.now().toString(); db.ref('cheques_v22/'+id).set({id:id, tipo:'separador', titulo:n.toUpperCase()}); }
     }
 
     function editar(id) {
         const c = datos.find(x => x.id == id);
-        if(!c) return;
         document.getElementById('num').value = c.num;
         document.getElementById('nombre').value = c.nombre;
         document.getElementById('importe').value = c.importe;
@@ -262,6 +271,7 @@
         document.getElementById('obs').value = c.obs || "";
         document.getElementById('carpetaSel').value = c.carpeta || carpetas[0];
         document.getElementById('editId').value = c.id;
+        document.querySelectorAll('.nav-in')[0].focus();
     }
 
     function limpiar() {
@@ -272,7 +282,7 @@
 
     function descargarJSON() {
         const b = new Blob([JSON.stringify(datos)], {type: "application/json"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Backup.json`; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Backup_Gabriel.json`; a.click();
     }
 
     function importarJSON(input) {
@@ -280,22 +290,20 @@
         r.onload = function() {
             try {
                 const lista = JSON.parse(r.result);
-                lista.forEach(item => { 
-                    const id = item.id || db.ref('cheques_v22').push().key;
-                    db.ref('cheques_v22/' + id).set(item); 
-                });
-                alert("Importado con éxito");
-            } catch(e) { alert("Error"); }
+                lista.forEach(item => { db.ref('cheques_v22/' + (item.id || Date.now())).update(item); });
+                alert("Importación exitosa");
+            } catch(e) { alert("Error al importar"); }
         };
         r.readAsText(input.files[0]);
     }
 
-    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques.pdf'); }
+    function generarPDF() { html2pdf().from(document.getElementById('pdf-area')).save('Cheques_Gabriel.pdf'); }
 
     document.addEventListener('keydown', e => {
-        if(e.key === "Enter" && e.target.classList.contains('nav-in')) {
-            const ins = Array.from(document.querySelectorAll('.nav-in'));
-            const idx = ins.indexOf(e.target);
+        const ins = Array.from(document.querySelectorAll('.nav-in'));
+        const idx = ins.indexOf(e.target);
+        if(e.key === "Enter" && idx > -1) {
+            e.preventDefault();
             if(idx === ins.length-1) guardar(); else ins[idx+1].focus();
         }
     });
